@@ -22,8 +22,14 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"bufio"
+	"database/sql"
 	"fmt"
+	"log"
+	"os"
+	"time"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
 )
 
@@ -39,6 +45,61 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("import called")
+
+		f, err := os.Open("export.txt")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+
+		scanner := bufio.NewScanner(f)
+		var domains []string
+
+		for scanner.Scan() {
+			fmt.Println("line:", scanner.Text())
+			domains = append(domains, scanner.Text())
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+
+		db, err := sql.Open("sqlite3", `test.db`)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer db.Close()
+
+		tx, err := db.Begin()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer tx.Rollback()
+
+		_, err = tx.Exec("DELETE FROM moz_perms WHERE type = 'cookie' AND permission = 1 AND expireTime = 0;")
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		now := time.Now().UnixMilli()
+		for _, domain := range domains {
+			_, err := tx.Exec(
+				"INSERT INTO moz_perms (origin, type, permission, expireType, expireTime, modificationTime) VALUES (?, 'cookie', 1, 0, 0, ?), (?, 'cookie', 1, 0, 0, ?)",
+				"https://"+domain, now, "http://"+domain, now,
+			)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+		}
+
+		if err = tx.Commit(); err != nil {
+			return
+		}
+
+		fmt.Println("Imported", len(domains), "domains")
 	},
 }
 

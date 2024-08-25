@@ -47,7 +47,7 @@ to quickly create a Cobra application.`,
 		fmt.Println("export called")
 
 		// Connect to the FireFox permissions database
-		db, err := sql.Open("sqlite3", `filepath`)
+		db, err := sql.Open("sqlite3", `test.db`)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -95,6 +95,8 @@ to quickly create a Cobra application.`,
 				log.Fatal(err)
 			}
 		}
+
+		fmt.Println("Exported", len(domains), "domains")
 	},
 }
 
