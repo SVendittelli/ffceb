@@ -31,6 +31,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // importCmd represents the import command
@@ -64,7 +65,7 @@ to quickly create a Cobra application.`,
 			log.Fatal(err)
 		}
 
-		db, err := sql.Open("sqlite3", `test.db`)
+		db, err := sql.Open("sqlite3", viper.GetString("profile")+"/permissions.sqlite")
 		if err != nil {
 			log.Fatal(err)
 		}

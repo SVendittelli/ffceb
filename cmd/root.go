@@ -63,11 +63,12 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ffce.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ffce.toml)")
+	rootCmd.PersistentFlags().StringP("profile", "p", "", "FireFox profile directory")
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	viper.BindPFlag("profile", rootCmd.Flags().Lookup("profile"))
+
+	rootCmd.MarkPersistentFlagFilename("config")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -82,11 +83,13 @@ func initConfig() {
 
 		// Search config in home directory with name ".ffce" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
+		viper.AddConfigPath(".")
+		viper.SetConfigType("toml")
 		viper.SetConfigName(".ffce")
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	viper.SetEnvPrefix("ffce") // will be uppercased automatically
+	viper.AutomaticEnv()       // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {

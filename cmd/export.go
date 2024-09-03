@@ -31,6 +31,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // exportCmd represents the export command
@@ -47,7 +48,7 @@ to quickly create a Cobra application.`,
 		fmt.Println("export called")
 
 		// Connect to the FireFox permissions database
-		db, err := sql.Open("sqlite3", `test.db`)
+		db, err := sql.Open("sqlite3", viper.GetString("profile")+"/permissions.sqlite")
 		if err != nil {
 			log.Fatal(err)
 		}
