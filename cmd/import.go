@@ -24,11 +24,10 @@ package cmd
 import (
 	"bufio"
 	"database/sql"
-	"fmt"
-	"log"
 	"os"
 	"time"
 
+	"github.com/charmbracelet/log"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -45,7 +44,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("import called")
+		log.Info("importing domains")
 
 		f, err := os.Open("export.txt")
 		if err != nil {
@@ -56,8 +55,9 @@ to quickly create a Cobra application.`,
 		scanner := bufio.NewScanner(f)
 		var domains []string
 
+		log.Debug("reading domains from file")
 		for scanner.Scan() {
-			fmt.Println("line:", scanner.Text())
+			log.Debug("reading", "domain", scanner.Text())
 			domains = append(domains, scanner.Text())
 		}
 
@@ -72,20 +72,24 @@ to quickly create a Cobra application.`,
 
 		defer db.Close()
 
+		log.Debug("starting transaction")
 		tx, err := db.Begin()
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer tx.Rollback()
 
+		log.Debug("deleting existing domains")
 		_, err = tx.Exec("DELETE FROM moz_perms WHERE type = 'cookie' AND permission = 1 AND expireTime = 0;")
 		if err != nil {
 			log.Fatal(err)
 			return
 		}
 
+		log.Debug("inserting imported domains")
 		now := time.Now().UnixMilli()
 		for _, domain := range domains {
+			log.Debug("inserting", "domain", domain, "modificationTime", now)
 			_, err := tx.Exec(
 				"INSERT INTO moz_perms (origin, type, permission, expireType, expireTime, modificationTime) VALUES (?, 'cookie', 1, 0, 0, ?), (?, 'cookie', 1, 0, 0, ?)",
 				"https://"+domain, now, "http://"+domain, now,
@@ -96,11 +100,12 @@ to quickly create a Cobra application.`,
 			}
 		}
 
+		log.Debug("committing transaction")
 		if err = tx.Commit(); err != nil {
 			return
 		}
 
-		fmt.Println("Imported", len(domains), "domains")
+		log.Infof("imported %d domains", len(domains))
 	},
 }
 

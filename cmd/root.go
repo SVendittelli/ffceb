@@ -22,9 +22,9 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -57,6 +57,19 @@ func Execute() {
 }
 
 func init() {
+	// Set log level from environment variable
+	// TODO: make configurable from CLI flag
+	switch os.Getenv("LOG_LEVEL") {
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	}
+
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
@@ -93,6 +106,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		log.Debug("using config file", "path", viper.ConfigFileUsed())
 	}
 }

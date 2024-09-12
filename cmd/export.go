@@ -23,12 +23,11 @@ package cmd
 
 import (
 	"database/sql"
-	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -45,7 +44,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("export called")
+		log.Info("exporting domains")
 
 		// Connect to the FireFox permissions database
 		db, err := sql.Open("sqlite3", viper.GetString("profile")+"/permissions.sqlite")
@@ -97,7 +96,7 @@ to quickly create a Cobra application.`,
 			}
 		}
 
-		fmt.Println("Exported", len(domains), "domains")
+		log.Infof("exported %d domains", len(domains))
 	},
 }
 
