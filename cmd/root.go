@@ -77,7 +77,7 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ffce.toml)")
-	rootCmd.PersistentFlags().StringP("profile", "p", "", "FireFox profile directory")
+	rootCmd.PersistentFlags().StringP("profile", "p", "", "Firefox profile directory")
 
 	viper.BindPFlag("profile", rootCmd.Flags().Lookup("profile"))
 

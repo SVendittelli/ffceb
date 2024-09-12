@@ -46,7 +46,7 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Info("exporting domains")
 
-		// Connect to the FireFox permissions database
+		// Connect to the Firefox permissions database
 		db, err := sql.Open("sqlite3", viper.GetString("profile")+"/permissions.sqlite")
 		if err != nil {
 			log.Fatal(err)
