@@ -30,6 +30,8 @@ import (
 )
 
 var cfgFile string
+var verbose bool
+var silent bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -53,19 +55,6 @@ func Execute() {
 }
 
 func init() {
-	// Set log level from environment variable
-	// TODO: make configurable from CLI flag
-	switch os.Getenv("LOG_LEVEL") {
-	case "debug":
-		log.SetLevel(log.DebugLevel)
-	case "info":
-		log.SetLevel(log.InfoLevel)
-	case "warn":
-		log.SetLevel(log.WarnLevel)
-	case "error":
-		log.SetLevel(log.ErrorLevel)
-	}
-
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
@@ -74,6 +63,8 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ffceb.toml)")
 	rootCmd.PersistentFlags().StringP("profile", "p", "", "Firefox profile directory")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "print verbose output")
+	rootCmd.PersistentFlags().BoolVar(&silent, "silent", false, "do not print output, this overrides verbose")
 
 	viper.BindPFlag("profile", rootCmd.Flags().Lookup("profile"))
 
@@ -99,6 +90,13 @@ func initConfig() {
 
 	viper.SetEnvPrefix("ffceb") // will be uppercased automatically
 	viper.AutomaticEnv()        // read in environment variables that match
+
+	if verbose {
+		log.SetLevel(log.DebugLevel)
+	}
+	if silent {
+		log.SetLevel(log.ErrorLevel)
+	}
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {

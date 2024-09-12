@@ -6,6 +6,9 @@ set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 @default:
     just --list --justfile {{justfile()}}
 
-run args $CGO_ENABLED="1":
+export CGO_ENABLED := "1"
+
+# go run with cgo enabled
+run *args:
     go run main.go {{args}}
 
