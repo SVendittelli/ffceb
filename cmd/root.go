@@ -55,6 +55,10 @@ func Execute() {
 }
 
 func init() {
+	// Disable timestamps in logs
+	log.SetReportTimestamp(false)
+
+	// Set up the config file
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
