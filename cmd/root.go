@@ -33,7 +33,7 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:     "ffce",
+	Use:     "ffceb",
 	Version: "0.0.1",
 	Short:   "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
@@ -76,7 +76,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ffce.toml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ffceb.toml)")
 	rootCmd.PersistentFlags().StringP("profile", "p", "", "Firefox profile directory")
 
 	viper.BindPFlag("profile", rootCmd.Flags().Lookup("profile"))
@@ -94,15 +94,15 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".ffce" (without extension).
+		// Search config in home directory with name ".ffceb" (without extension).
 		viper.AddConfigPath(home)
 		viper.AddConfigPath(".")
 		viper.SetConfigType("toml")
-		viper.SetConfigName(".ffce")
+		viper.SetConfigName(".ffceb")
 	}
 
-	viper.SetEnvPrefix("ffce") // will be uppercased automatically
-	viper.AutomaticEnv()       // read in environment variables that match
+	viper.SetEnvPrefix("ffceb") // will be uppercased automatically
+	viper.AutomaticEnv()        // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {

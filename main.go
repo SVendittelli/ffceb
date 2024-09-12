@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/SVendittelli/ffce/cmd"
+import "github.com/SVendittelli/ffceb/cmd"
 
 func main() {
 	cmd.Execute()

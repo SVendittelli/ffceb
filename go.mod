@@ -1,4 +1,4 @@
-module github.com/SVendittelli/ffce
+module github.com/SVendittelli/ffceb
 
 go 1.23.0
 
