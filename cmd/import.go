@@ -33,6 +33,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+var overwrite bool
+
 // importCmd represents the import command
 var importCmd = &cobra.Command{
 	Use:   "import",
@@ -45,6 +47,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Info("importing domains")
+		log.Debug("flags", "overwrite", overwrite)
 
 		f, err := os.Open("export.txt")
 		if err != nil {
@@ -79,16 +82,44 @@ to quickly create a Cobra application.`,
 		}
 		defer tx.Rollback()
 
-		log.Debug("deleting existing domains")
-		_, err = tx.Exec("DELETE FROM moz_perms WHERE type = 'cookie' AND permission = 1 AND expireTime = 0;")
-		if err != nil {
-			log.Fatal(err)
-			return
+		var impCount int = 0
+		var delCount int = 0
+
+		if overwrite {
+			log.Debug("deleting existing domains")
+			err = db.QueryRow("SELECT COUNT(*) FROM moz_perms WHERE type = 'cookie' AND permission = 1 AND expireTime = 0").Scan(&delCount)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			_, err = tx.Exec("DELETE FROM moz_perms WHERE type = 'cookie' AND permission = 1 AND expireTime = 0;")
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
 		}
 
 		log.Debug("inserting imported domains")
 		now := time.Now().UnixMilli()
 		for _, domain := range domains {
+			if !overwrite {
+				log.Debug("checking for existing domain", "domain", domain)
+				var count int
+				err := db.QueryRow(
+					"SELECT COUNT(*) FROM moz_perms WHERE type = 'cookie' AND permission = 1 AND expireTime = 0 AND (origin = ? OR origin = ?)",
+					"https://"+domain, "http://"+domain,
+				).Scan(&count)
+
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				log.Debug("domain exists, skipping import", "domain", domain)
+				if count > 0 {
+					continue
+				}
+			}
+
 			log.Debug("inserting", "domain", domain, "modificationTime", now)
 			_, err := tx.Exec(
 				"INSERT INTO moz_perms (origin, type, permission, expireType, expireTime, modificationTime) VALUES (?, 'cookie', 1, 0, 0, ?), (?, 'cookie', 1, 0, 0, ?)",
@@ -98,6 +129,8 @@ to quickly create a Cobra application.`,
 				log.Fatal(err)
 				return
 			}
+			// We need to insert two rows for each domain
+			impCount += 2
 		}
 
 		log.Debug("committing transaction")
@@ -105,7 +138,7 @@ to quickly create a Cobra application.`,
 			return
 		}
 
-		log.Infof("imported %d domains", len(domains))
+		log.Infof("imported %d new origins, deleted %d existing origins", impCount, delCount)
 	},
 }
 
@@ -121,4 +154,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// importCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	importCmd.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "Overwrite existing domains, any domains not in the export file will be deleted")
 }
