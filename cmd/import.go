@@ -23,10 +23,12 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"database/sql"
 	"os"
 	"time"
 
+	"github.com/SVendittelli/ffceb/repository"
 	"github.com/charmbracelet/log"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
@@ -46,6 +48,8 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+
 		log.Info("importing domains")
 		log.Debug("flags", "overwrite", overwrite)
 
@@ -68,12 +72,17 @@ to quickly create a Cobra application.`,
 			log.Fatal(err)
 		}
 
-		db, err := sql.Open("sqlite3", viper.GetString("profile")+"/permissions.sqlite")
+		db_file := viper.GetString("profile") + "/permissions.sqlite"
+		log.Debug("accessing db", "db_file", db_file)
+
+		// Connect to the Firefox permissions database
+		db, err := sql.Open("sqlite3", db_file)
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		defer db.Close()
+
+		queries := repository.New(db)
 
 		log.Debug("starting transaction")
 		tx, err := db.Begin()
@@ -82,21 +91,19 @@ to quickly create a Cobra application.`,
 		}
 		defer tx.Rollback()
 
-		var impCount int = 0
-		var delCount int = 0
+		qtx := queries.WithTx(tx)
+
+		var impCount int64 = 0
+		var delCount int64 = 0
 
 		if overwrite {
 			log.Debug("deleting existing domains")
-			err = db.QueryRow("SELECT COUNT(*) FROM moz_perms WHERE type = 'cookie' AND permission = 1 AND expireTime = 0").Scan(&delCount)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			_, err = tx.Exec("DELETE FROM moz_perms WHERE type = 'cookie' AND permission = 1 AND expireTime = 0;")
+			delCount, err = qtx.DeleteAll(ctx)
 			if err != nil {
 				log.Fatal(err)
 				return
 			}
+			log.Debugf("deleted %d domains", delCount)
 		}
 
 		log.Debug("inserting imported domains")
@@ -104,31 +111,25 @@ to quickly create a Cobra application.`,
 		for _, domain := range domains {
 			if !overwrite {
 				log.Debug("checking for existing domain", "domain", domain)
-				var count int
-				err := db.QueryRow(
-					"SELECT COUNT(*) FROM moz_perms WHERE type = 'cookie' AND permission = 1 AND expireTime = 0 AND (origin = ? OR origin = ?)",
-					"https://"+domain, "http://"+domain,
-				).Scan(&count)
 
+				count, err := qtx.CountExcludedDomain(ctx, domain)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				log.Debug("domain exists, skipping import", "domain", domain)
 				if count > 0 {
+					log.Debug("domain exists, skipping import", "domain", domain)
 					continue
 				}
 			}
 
 			log.Debug("inserting", "domain", domain, "modificationTime", now)
-			_, err := tx.Exec(
-				"INSERT INTO moz_perms (origin, type, permission, expireType, expireTime, modificationTime) VALUES (?, 'cookie', 1, 0, 0, ?), (?, 'cookie', 1, 0, 0, ?)",
-				"https://"+domain, now, "http://"+domain, now,
-			)
+			err := qtx.CreateExcludedDomain(ctx, repository.CreateExcludedDomainParams{Domain: domain, Now: now})
 			if err != nil {
 				log.Fatal(err)
 				return
 			}
+
 			// We need to insert two rows for each domain
 			impCount += 2
 		}

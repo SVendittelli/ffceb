@@ -22,11 +22,13 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"context"
 	"database/sql"
 	"os"
 	"sort"
 	"strings"
 
+	"github.com/SVendittelli/ffceb/repository"
 	"github.com/charmbracelet/log"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
@@ -44,38 +46,34 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+
 		log.Info("exporting domains")
 
+		db_file := viper.GetString("profile") + "/permissions.sqlite"
+		log.Debug("accessing db", "db_file", db_file)
+
 		// Connect to the Firefox permissions database
-		db, err := sql.Open("sqlite3", viper.GetString("profile")+"/permissions.sqlite")
+		db, err := sql.Open("sqlite3", db_file)
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		defer db.Close()
 
-		rows, err := db.Query("SELECT origin FROM moz_perms WHERE type = 'cookie' AND permission = 1 AND expireTime = 0")
+		queries := repository.New(db)
+
+		origins, err := queries.ListExcludedOrigins(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer rows.Close()
 
 		var domains []string
-		for rows.Next() {
-			var origin string
-
-			err = rows.Scan(&origin)
-			if err != nil {
-				log.Fatal(err)
-			}
+		for _, origin := range origins {
+			log.Debug("exporting", "origin", origin.String)
 
 			// Strip protocol from origin
-			split := strings.Split(origin, "://")
+			split := strings.Split(origin.String, "://")
 			domains = append(domains, split[1])
-		}
-		err = rows.Err()
-		if err != nil {
-			log.Fatal(err)
 		}
 
 		// Remove duplicates and sort
@@ -116,6 +114,7 @@ func init() {
 
 // removeDuplicates removes duplicates from a slice of strings
 func removeDuplicates(s []string) []string {
+	log.Debug("de-duplicating", "count", len(s))
 	allKeys := make(map[string]bool)
 	list := []string{}
 	for _, item := range s {
@@ -124,5 +123,6 @@ func removeDuplicates(s []string) []string {
 			list = append(list, item)
 		}
 	}
+	log.Debug("done de-duplicating", "count", len(list))
 	return list
 }
