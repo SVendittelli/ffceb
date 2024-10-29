@@ -26,6 +26,7 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/SVendittelli/ffceb/repository"
@@ -53,7 +54,10 @@ to quickly create a Cobra application.`,
 		log.Info("importing domains")
 		log.Debug("flags", "overwrite", overwrite)
 
-		f, err := os.Open("export.txt")
+		export_file := os.ExpandEnv(filepath.Join(viper.GetString("exportDir"), "export.txt"))
+		log.Debug("reading file", "export_file", export_file)
+
+		f, err := os.Open(export_file)
 		if err != nil {
 			log.Fatal(err)
 		}

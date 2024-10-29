@@ -25,6 +25,7 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -81,7 +82,13 @@ to quickly create a Cobra application.`,
 		sort.Strings(domains)
 
 		// Write domains to file
-		f, err := os.Create("export.txt")
+		export_file := os.ExpandEnv(filepath.Join(viper.GetString("exportDir"), "export.txt"))
+		log.Debug("creating file", "export_file", export_file)
+
+		if err := os.MkdirAll(filepath.Dir(export_file), 0770); err != nil {
+			log.Fatal(err)
+		}
+		f, err := os.Create(export_file)
 		if err != nil {
 			log.Fatal(err)
 		}
